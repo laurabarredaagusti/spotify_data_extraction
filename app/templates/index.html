@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Download Spotify dataset</title>
+    <meta name="description" content="Download Spotify dataset">
+    <meta name="keywords" content="Download Spotify dataset">
+    <style type="text/css">
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0px;
+            background-size: cover;
+            background-size: cover;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+            position: absolute;
+        } 
+        .form {
+            display: flex;
+            flex-direction: column;
+            padding: 3rem;
+        }
+    </style>
+</head>
+
+<body>
+</body>
+    <h1 style="color:black;font-family:verdana;font-weight: 400;letter-spacing: 1px;">Download Spotify Dataset</h1>
+
+    <div class="forms">
+        <div class="form">
+            <h2 style="color:black;font-family:verdana;font-size: 18px;font-weight: 300;">Enter playlist name</h2>
+            <form method="get" action="/extract" autocomplete="on" >
+                <textarea type="text" name="playlistName" class="longInput" cols="30" rows="1" style="padding-left:10px;padding-right:10px;border-width:1px;margin-bottom:10px;width:300px;height:10px"></textarea><br/>
+                <textarea type="text" name="playlistGenre" class="longInput" cols="30" rows="1" style="padding-left:10px;padding-right:10px;border-width:1px;margin-bottom:10px;width:300px;height:10px"></textarea><br/>
+                <textarea type="text" name="playlistURL" class="longInput" cols="30" rows="1" style="padding-left:10px;padding-right:10px;border-width:1px;margin-bottom:10px;width:300px;height:10px"></textarea><br/>
+                <button type="submit" style="font-family:verdana;background-color:white;border-color:black;border-width:1px;padding-top:5px;padding-bottom:5px;padding-left:20px;padding-right:20px;">Submit</bsutton>
+            </form>
+        </div>
+    </div>
+
+</html>
