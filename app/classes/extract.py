@@ -43,9 +43,13 @@ class Extract():
 
         self.getPlaylistID()   # Transform the playlist link to get the id
         self.apiResponse()   # Create the authentification to access data
-        self.getAllTracks()   # Access each of the tracks of the playlist
-        self.extractAllData()   # Extract all the data which will be stored
-        self.jsonifyDict()
+        self.getResponseCode()
+        if self.statusCode == 200:
+            self.getAllTracks()   # Access each of the tracks of the playlist
+            self.extractAllData()   # Extract all the data which will be stored
+            self.jsonifyDict()
+        else:
+            self.dataJson = {}
         # self.dict_to_df()   # Transform the dictionary into a dataframe
         # self.df_to_csv()   # Save the dataframe as a csv file
         
@@ -74,14 +78,17 @@ class Extract():
         self.headers = {'Authorization': 'Bearer {token}'.format(token=accessToken)}   # Save the headers
 
 
+    def getResponseCode(self):
+        self.playlist100 = requests.get(self.BASE_URL + 'playlists/' + self.playlistID + '/tracks',    
+                                headers=self.headers, params={'offset':self.offset})
+        self.statusCode = self.playlist100.status_code
+
+
     def getAllTracks(self):
         '''
         This function will get a list with all the tracks from the given playlist
         '''
-        playlist100 = requests.get(self.BASE_URL + 'playlists/' + self.playlistID + '/tracks',    
-                                headers=self.headers, params={'offset':self.offset})       
-       
-        playlist100Dict = playlist100.json()   # Transform the result into a dictionary
+        playlist100Dict = self.playlist100.json()   # Transform the result into a dictionary
 
         self.playlistItems = playlist100Dict['items']   # Keep just the list with the items values
 

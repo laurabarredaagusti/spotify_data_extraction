@@ -18,7 +18,10 @@ def extract():
 
     extractedData = Extract(playlistName, playlistGenre, playlistURL, fileName)
 
-    return extractedData.dataJson
+    if extractedData.dataJson == {}:
+        return render_template('index.html')
+    else:
+        return extractedData.dataJson
 
 if __name__ == '__main__':
   app.run(debug = True, host = '0.0.0.0', port=environ.get("PORT", 4000))
