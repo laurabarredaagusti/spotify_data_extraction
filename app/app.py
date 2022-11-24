@@ -1,4 +1,4 @@
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template, send_from_directory, jsonify
 from classes.extract import *
 from os import environ
 from functions import *
@@ -17,17 +17,14 @@ def extract():
     playlistGenre = get_arguments('playlistGenre')
     playlistURL = get_arguments('playlistURL')
 
-    print(playlistName)
-    print(playlistURL)
-
     if playlistName == '' or playlistURL == '':
         return render_template('index.html', error='Please enter playlist url and playlist name')
     else:
         extractedData = Extract(playlistName, playlistGenre, playlistURL)
-        if extractedData.dataJson == {}:
+        if extractedData.playlist.status_code != 200:
             return render_template('index.html', error='Please enter a valid url')
         else:
-            return extractedData.dataJson
+            return jsonify(extractedData.trackData)
 
 
 if __name__ == '__main__':

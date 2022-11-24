@@ -1,8 +1,8 @@
-trackFeatureList = ['name', 'popularity']   # Track name and track popularity
+TRACK_FEATURE_LIST = ['name', 'popularity']   # Track name and track popularity
 
-artistFeatureList = ['genres', 'popularity']   # Artist genres and artist popularity
+ARTIST_FEATURE_LIST = ['genres', 'popularity']   # Artist genres and artist popularity
 
-audioFeatureList = ['danceability', 'energy', 'key', 'loudness', 'mode',   # Audio features  
+AUDIO_FEATURES_LIST = ['danceability', 'energy', 'key', 'loudness', 'mode',   # Audio features  
                        'speechiness', 'acousticness', 'instrumentalness', 'liveness',   
                        'valence', 'tempo', 'duration_ms', 'time_signature'] 
 

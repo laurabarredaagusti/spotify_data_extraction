@@ -1,7 +1,6 @@
 import requests
 from time import sleep
 import pandas as pd
-from flask import jsonify
 
 from variables import *
 from variablesPriv import *
@@ -11,17 +10,6 @@ class Extract():
     This class contains all the necessary data to extract all the tracks from a given playlist, store the 
     track details, and save it into a csv file.
     '''
-    # Track features that we can import using the same syntax
-    trackFeatureList = trackFeatureList   # Track name and track popularity
-    artistFeatureList = artistFeatureList   # Artist genres and artist popularity
-    audioFeatureList = audioFeatureList   # Audio features 
-
-    CLIENT_ID = CLIENT_ID   # Client id, personal credential
-    CLIENT_SECRET = CLIENT_SECRET   # Client secret, personal credential
-
-    AUTH_URL = AUTH_URL   # Authorisation URL
-    BASE_URL = BASE_URL   # Base URL of all Spotify API endpoints
-
     offset = 0   # The offset is set to 0 and it will be increased later
 
     trackData = {}   # Empty dictionary where all the data will be stored
@@ -43,16 +31,11 @@ class Extract():
 
         self.getPlaylistID()   # Transform the playlist link to get the id
         self.modEmptyGenre()   # Modify the genre if empty
-        self.apiResponse()   # Create the authentification to access data
-        self.getResponseCode()
-        if self.statusCode == 200:
-            self.getAllTracks()   # Access each of the tracks of the playlist
+        self.authenticate()   # Create the authentification to access data
+        self.playlist = self.apiCall(f'playlists/{self.playlistID}/tracks', {'offset':self.offset})
+        if self.playlist.status_code == 200:
+            self.getAllTracks(self.playlist.json())   # Access each of the tracks of the playlist
             self.extractAllData()   # Extract all the data which will be stored
-            self.jsonifyDict()
-        else:
-            self.dataJson = {}
-        # self.dict_to_df()   # Transform the dictionary into a dataframe
-        # self.df_to_csv()   # Save the dataframe as a csv file
         
 
     def getPlaylistID(self):
@@ -70,142 +53,126 @@ class Extract():
             self.playlistGenre = 'undefined' 
 
 
-    def apiResponse(self):
+    def authenticate(self):
         '''
         This function will create the personalised headers to get data from the API
         Needed personal variables: client_id, client_secret
         '''
         # create the response from the API
-        authResponse = requests.post(self.AUTH_URL, {'grant_type': 'client_credentials',
-                                                     'client_id': self.CLIENT_ID,
-                                                     'client_secret': self.CLIENT_SECRET,})
+        authResponse = requests.post(AUTH_URL, {'grant_type': 'client_credentials',
+                                                     'client_id': CLIENT_ID,
+                                                     'client_secret': CLIENT_SECRET,})
 
         authResponseData = authResponse.json()   # convert the response to JSON
 
-        accessToken = authResponseData['access_token']   # save the access token
-
-        self.headers = {'Authorization': 'Bearer {token}'.format(token=accessToken)}   # Save the headers
+        self.headers = {'Authorization': 'Bearer {token}'.format(token=authResponseData['access_token'])}   # Save the headers
 
 
-    def getResponseCode(self):
-        self.playlist100 = requests.get(self.BASE_URL + 'playlists/' + self.playlistID + '/tracks',    
-                                headers=self.headers, params={'offset':self.offset})
-        self.statusCode = self.playlist100.status_code
-
-
-    def getAllTracks(self):
-        '''
-        This function will get a list with all the tracks from the given playlist
-        '''
-        playlist100Dict = self.playlist100.json()   # Transform the result into a dictionary
-
-        self.playlistItems = playlist100Dict['items']   # Keep just the list with the items values
-
-        # This loop will iterate over all the tracks from the playlist while the offset (starting
-        # from 0) is smaller than the total number of tracks, which we can find under the key 'total'
-        while self.offset < playlist100Dict['total']:  
-
-            self.offset += 100   # adding 100 to the offset will get the next 100 tracks and we will do a new call
-
-            playlist100 = requests.get(BASE_URL + 'playlists/' + self.playlistID + '/tracks', 
-                                    headers=self.headers, params={'offset':self.offset})
-
-            playlist100Dict = playlist100.json()   # add the result to a dictionary
-
-            playlistItems100 = playlist100Dict['items']   # extract the values under items
-
-            for elem in playlistItems100:   # append the new values to the previous list
-                self.playlistItems.append(elem)
-
-
-    def apiCall(self, url_string, url_id):
+    def apiCall(self, url_string, parameters=None):
         '''
         This function will do individual calls to the API
         '''
-        self.apiData = requests.get(self.BASE_URL + url_string + '/' + url_id, headers=self.headers)
-
-        self.apiData = self.apiData.json()
+        return requests.get(BASE_URL + url_string, headers=self.headers, params=parameters)
 
 
-    def defineTrackID(self):
+    def getAllTracks(self, playlist):
+        '''
+        This function will get a list with all the tracks from the given playlist
+        '''
+        self.playlistItems = playlist['items']   # Keep just the list with the items values
+
+        # This loop will iterate over all the tracks from the playlist while the offset (starting
+        # from 0) is smaller than the total number of tracks, which we can find under the key 'total'
+        while self.offset < playlist['total']:  
+
+            self.offset += 100   # adding 100 to the offset will get the next 100 tracks and we will do a new call
+
+            playlist = self.apiCall(f'playlists/{self.playlistID}/tracks', {'offset':self.offset}).json()   # add the result to a dictionary
+
+            for elem in playlist['items']:   # append the new values to the previous list
+                self.playlistItems.append(elem)
+
+
+    def defineTrackID(self, track):
         '''
         This function will modify the track name, call the api and return the id of the track
         '''
-        self.track_id = self.track['track']['uri']   # Obtain the track id from the track uri
+        track_id = track['track']['uri']   # Obtain the track id from the track uri
 
-        self.track_id = self.track_id.replace('spotify:track:', '')   # Remove unnecesary characters from the id
+        track_id = track_id.replace('spotify:track:', '')   # Remove unnecesary characters from the id
 
-        self.trackData[self.track_id] = {}   # Create a new dictionary key with the track id
+        self.trackData[track_id] = {}   # Create a new dictionary key with the track id
+
+        return track_id
 
 
-    def playlistData(self):
+    def addPlaylistData(self, individualTrackFeatures):
         '''
         This function will store the playlist url and name in order to keep the information next to the track
         '''
-        self.individualTrackFeatures['playlist_url'] = self.playlistURL   # Store the playlist link 
-        self.individualTrackFeatures['playlist_name'] = self.playlistName   # Store the playlist name 
+        individualTrackFeatures['playlist_url'] = self.playlistURL   # Store the playlist link 
+        individualTrackFeatures['playlist_name'] = self.playlistName   # Store the playlist name
+        individualTrackFeatures['genre'] = self.playlistGenre
+
+        return individualTrackFeatures
 
 
-    def trackMainFeatures(self):
+    def addTrackMainFeatures(self, individualTrackFeatures, track):
         '''
         This function will iterate over the main track features and extract them into a dictionary
         '''
-        for feature in self.trackFeatureList:   # loop over the track main features and store them
+        for feature in TRACK_FEATURE_LIST:   # loop over the track main features and store them
             try:
-                featureData = self.track['track'][feature]
-                feature = 'track_' + feature
-                self.individualTrackFeatures[feature] = featureData
+                individualTrackFeatures[f'track_{feature}'] = track['track'][feature]
             except:
-                self.individualTrackFeatures[feature] = None
+                individualTrackFeatures[feature] = None
             
         # Artist name
         try:
-            artistName = self.track['track']['artists'][0]['name']   # Extract and store the artist name
-            self.individualTrackFeatures['artist_name'] = artistName 
+            individualTrackFeatures['artist_name'] = track['track']['artists'][0]['name']   # Extract and store the artist name 
         except:
-            self.individualTrackFeatures['artist_name'] = None
+            individualTrackFeatures['artist_name'] = None
 
         # Album name
         try:
-            album = self.track['track']["album"]["name"]   # Extract and store the album name
-            self.individualTrackFeatures['album'] = album
+            individualTrackFeatures['album'] = track['track']["album"]["name"]
         except: 
-            self.individualTrackFeatures['album'] = None 
+            individualTrackFeatures['album'] = None 
 
         # Album cover
         try:
-            albumCover = self.track['track']["album"]["images"][0]['url']   # Extract and store the album cover
-            self.individualTrackFeatures['album_cover'] = albumCover
+            individualTrackFeatures['album_cover'] = track['track']["album"]["images"][0]['url']
         except:
-            self.individualTrackFeatures['album_cover'] = None
+            individualTrackFeatures['album_cover'] = None
 
-        self.artist_id = self.track['track']["artists"][0]["uri"]   # Extract the id of the artist 
-        self.artist_id = self.artist_id.replace('spotify:artist:', '')
+        artist_id = track['track']["artists"][0]["uri"]   # Extract the id of the artist 
+        return individualTrackFeatures, artist_id.replace('spotify:artist:', '')
 
     
-    def extractArtistFeatures(self):
+    def addArtistFeatures(self, artistData, individualTrackFeatures):
         '''
         This function will iterate over the main artist features and extract them into a dictionary
         '''
-        for feature in self.artistFeatureList:   # Loop over the artist main features, extract and store the data
+        for feature in ARTIST_FEATURE_LIST:   # Loop over the artist main features, extract and store the data
             try:
-                featureData = self.apiData[feature]
-                feature = 'artist_' + feature   # Transform the name of the feature to be albe to identify the data   
-                self.individualTrackFeatures[feature] = featureData
+                individualTrackFeatures[f'artist_{feature}'] = artistData[feature]
             except:
-                self.individualTrackFeatures[feature] = None 
+                individualTrackFeatures[feature] = None
+
+        return individualTrackFeatures
 
 
-    def extractAudioFeatures(self):
+    def addAudioFeatures(self, audioFeatures, individualTrackFeatures):
         '''
         This function will iterate over all the audio features and extract them into a dictionary
         '''
-        for feature in self.audioFeatureList:   # Loop over the audio feature list, extract and store the data
+        for feature in AUDIO_FEATURES_LIST:   # Loop over the audio feature list, extract and store the data
             try:
-                featureData = self.apiData[feature] 
-                self.individualTrackFeatures[feature] = featureData
+                individualTrackFeatures[feature] = audioFeatures[feature] 
             except:
-                self.individualTrackFeatures[feature] = None 
+                individualTrackFeatures[feature] = None
+        
+        return individualTrackFeatures
 
 
     def extractAllData(self):
@@ -214,59 +181,22 @@ class Extract():
         Since we have added dictionaries into track_list, and every dictionary has 100 tracks, 
         we need to iterate over each of them
         '''
-        for index, self.track in enumerate(self.playlistItems):   # This loop will iterate over the tracks in the dictionary and get the information
+        for track in self.playlistItems:   # This loop will iterate over the tracks in the dictionary and get the information
 
-            self.individualTrackFeatures = {}   # Empty dictionary to store data of every individual track
-            
             try:
-                self.defineTrackID()   # Extract the track ID and create the dictionary key  
+                track_id = self.defineTrackID(track)   # Extract the track ID and create the dictionary key  
 
-                self.playlistData()   # Store playlist url and name
+                individualTrackFeatures = self.addPlaylistData({})   # Store playlist url and name
 
-                self.trackMainFeatures()   # Extract the track main features, and store the artist id
+                individualTrackFeatures, artist_id = self.addTrackMainFeatures(individualTrackFeatures, track)   # Extract the track main features, and store the artist id
+                
+                individualTrackFeatures = self.addArtistFeatures(self.apiCall(f'artists/{artist_id}').json(), individualTrackFeatures)   # Extract the artist main features
+                    
+                individualTrackFeatures = self.addAudioFeatures(self.apiCall(f'audio-features/{track_id}').json(), individualTrackFeatures)   # Extract the audio features
 
-                self.apiCall('artists', self.artist_id)   # Access the artist features using the artist id
-
-                self.extractArtistFeatures()   # Extract the artist main features
-
-                self.apiCall('audio-features', self.track_id)   # Access the audio features using the track id
-                        
-                self.extractAudioFeatures()   # Extract the audio features
-
-                self.individualTrackFeatures['genre'] = self.playlistGenre   # Add the genre of the list to the dict 
-
-                self.dict_into_dict()   # Add the data into the nested dictionary, under the specific track id key
+                self.trackData[track_id] = individualTrackFeatures
 
                 sleep(0.1)
 
             except:
                 continue
-
-    
-    def dict_into_dict(self):
-        '''
-        This function will add the audio features in a nested dictionary, under the track_id 
-        '''
-        self.trackData[self.track_id] = self.individualTrackFeatures
-
-    
-    def jsonifyDict(self):
-        '''
-        This function will transform the resulting dictionary into a json file
-        '''
-        self.dataJson = jsonify(self.trackData)
-
-    
-    def dict_to_df(self):
-        '''
-        This function will transform the resulting dictionary into a dataframe
-        '''
-        self.trackDataDf = pd.DataFrame.from_dict(self.trackData, orient='index')
-
-
-    def df_to_csv(self):
-        '''
-        This function will save the dataframe as a csv file
-        '''
-        path = self.fileName + '.csv'
-        self.trackDataDf.to_csv(path)
