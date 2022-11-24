@@ -41,6 +41,7 @@ class Extract():
         self.playlistURL = playlistURL
 
         self.getPlaylistID()   # Transform the playlist link to get the id
+        self.modEmptyGenre()   # Modify the genre if empty
         self.apiResponse()   # Create the authentification to access data
         self.getResponseCode()
         if self.statusCode == 200:
@@ -58,6 +59,14 @@ class Extract():
         This functions transforms the playlist link to get the id
         '''
         self.playlistID = self.playlistURL.split("/")[-1].split("?")[0] 
+
+
+    def modEmptyGenre(self):
+        '''
+        This functions sets the genre as undefined, in case it's empty.
+        '''
+        if self.playlistGenre == '':
+            self.playlistGenre = 'undefined' 
 
 
     def apiResponse(self):
@@ -207,26 +216,30 @@ class Extract():
         for index, self.track in enumerate(self.playlistItems):   # This loop will iterate over the tracks in the dictionary and get the information
 
             self.individualTrackFeatures = {}   # Empty dictionary to store data of every individual track
+            
+            try:
+                self.defineTrackID()   # Extract the track ID and create the dictionary key  
 
-            self.defineTrackID()   # Extract the track ID and create the dictionary key  
+                self.playlistData()   # Store playlist url and name
 
-            self.playlistData()   # Store playlist url and name
+                self.trackMainFeatures()   # Extract the track main features, and store the artist id
 
-            self.trackMainFeatures()   # Extract the track main features, and store the artist id
+                self.apiCall('artists', self.artist_id)   # Access the artist features using the artist id
 
-            self.apiCall('artists', self.artist_id)   # Access the artist features using the artist id
+                self.extractArtistFeatures()   # Extract the artist main features
 
-            self.extractArtistFeatures()   # Extract the artist main features
+                self.apiCall('audio-features', self.track_id)   # Access the audio features using the track id
+                        
+                self.extractAudioFeatures()   # Extract the audio features
 
-            self.apiCall('audio-features', self.track_id)   # Access the audio features using the track id
-                    
-            self.extractAudioFeatures()   # Extract the audio features
+                self.individualTrackFeatures['genre'] = self.playlistGenre   # Add the genre of the list to the dict 
 
-            self.individualTrackFeatures['genre'] = self.playlistGenre   # Add the genre of the list to the dict 
+                self.dict_into_dict()   # Add the data into the nested dictionary, under the specific track id key
 
-            self.dict_into_dict()   # Add the data into the nested dictionary, under the specific track id key
+                sleep(0.1)
 
-            sleep(0.1)
+            except:
+                continue
 
     
     def dict_into_dict(self):
