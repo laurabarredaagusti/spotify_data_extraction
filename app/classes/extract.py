@@ -4,6 +4,7 @@ import pandas as pd
 from flask import jsonify
 
 from variables import *
+from variablesPriv import *
 
 class Extract():
     '''
