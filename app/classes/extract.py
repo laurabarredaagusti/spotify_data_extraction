@@ -26,7 +26,7 @@ class Extract():
     trackData = {}   # Empty dictionary where all the data will be stored
 
 
-    def __init__(self, playlistName, playlistGenre, playlistURL, fileName):
+    def __init__(self, playlistName, playlistGenre, playlistURL):
         '''
         This function will initiate the clase, given the following playlist elements:
             · name
@@ -39,7 +39,6 @@ class Extract():
         self.playlistName = playlistName
         self.playlistGenre = playlistGenre
         self.playlistURL = playlistURL
-        self.fileName = fileName
 
         self.getPlaylistID()   # Transform the playlist link to get the id
         self.apiResponse()   # Create the authentification to access data
